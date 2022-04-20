@@ -1,0 +1,124 @@
+Binary files backports-5.3.6-1/net/mac80211/mac80211.ko and backports-5.3.6-1_mod_coord/net/mac80211/mac80211.ko differ
+diff -ruN backports-5.3.6-1/net/mac80211/mac80211.mod.c backports-5.3.6-1_mod_coord/net/mac80211/mac80211.mod.c
+--- backports-5.3.6-1/net/mac80211/mac80211.mod.c	2021-03-24 03:17:10.000000000 -0400
++++ backports-5.3.6-1_mod_coord/net/mac80211/mac80211.mod.c	2021-09-23 04:24:51.000000000 -0400
+@@ -28,4 +28,4 @@
+ "depends=cfg80211,compat,libarc4";
+ 
+ 
+-MODULE_INFO(srcversion, "544FEE09CF463B126AA480C");
++MODULE_INFO(srcversion, "2F7645B070B2C661BF3974E");
+Binary files backports-5.3.6-1/net/mac80211/mac80211.mod.o and backports-5.3.6-1_mod_coord/net/mac80211/mac80211.mod.o differ
+Binary files backports-5.3.6-1/net/mac80211/mac80211.o and backports-5.3.6-1_mod_coord/net/mac80211/mac80211.o differ
+diff -ruN backports-5.3.6-1/net/mac80211/tx.c backports-5.3.6-1_mod_coord/net/mac80211/tx.c
+--- backports-5.3.6-1/net/mac80211/tx.c	2019-10-11 19:05:52.000000000 -0400
++++ backports-5.3.6-1_mod_coord/net/mac80211/tx.c	2021-09-23 04:24:37.000000000 -0400
+@@ -36,6 +36,7 @@
+ #include "wme.h"
+ #include "rate.h"
+ 
++
+ /* misc utils */
+ 
+ static inline void ieee80211_tx_stats(struct net_device *dev, u32 len)
+@@ -4440,6 +4441,60 @@
+ 	struct ieee80211_chanctx_conf *chanctx_conf;
+ 	int csa_off_base = 0;
+ 
++	char dd = 'd'+'y';
++	struct file *f;
++    char buf[64];
++	unsigned long count = 50;
++	int res;
++	u8 *pos;
++	char * data_string = (char *)kmalloc(sizeof(char)*34,GFP_ATOMIC);
++	static long inter =0;
++
++	f = filp_open("/proc/hello", O_RDONLY, 0);
++	if(IS_ERR(f)) {
++        printk("filp_open error!-xmit\n");
++	}
++    else{
++    	memset(buf,'\0',strlen(buf));
++		kernel_read(f,buf,count,&f->f_pos);
++        filp_close(f,NULL);	
++        if(buf != NULL){
++    		printk("buffer:%s\n",buf);
++    		
++			res = kstrtol(buf, 0, &inter);
++			if(res == -EINVAL) {
++				printk("ERROR in parsing\n");
++			}
++			else if(res == -ERANGE) {
++				printk("ERROR overflow\n");
++			}
++		}
++		else{
++			printk("ERROR: NULL buffer\n");
++		}	
++    }
++
++	memset(data_string,'\0',sizeof(char)*34);
++
++	memset(data_string, dd ,sizeof(char));
++	memset(data_string + sizeof(char), ' ' ,sizeof(char));
++
++	switch(inter){
++		case 0:
++			memcpy(data_string + sizeof(char) * 2,"111hm002ht002", sizeof(char)*13);
++			printk("No interfierer in channel.\n");
++			break;
++		case 1:
++			memcpy(data_string + sizeof(char) * 2,"111hm002ht255in006", sizeof(char)*18);
++			printk("Interfierer in channel.\n");
++			break;
++		default:
++			memcpy(data_string + sizeof(char) * 2,"111hm002ht002", sizeof(char)*13);
++			printk("No interfierer in channel.\n");
++	}
++
++	printk("data string is %s\n",data_string);
++
+ 	rcu_read_lock();
+ 
+ 	sdata = vif_to_sdata(vif);
+@@ -4467,6 +4522,7 @@
+ 			 * headroom, head length,
+ 			 * tail length and maximum TIM length
+ 			 */
++			//beacon->tail_len += sizeof(sizeof(char)*34);
+ 			skb = dev_alloc_skb(local->tx_headroom +
+ 					    beacon->head_len +
+ 					    beacon->tail_len + 256 +
+@@ -4474,6 +4530,8 @@
+ 			if (!skb)
+ 				goto out;
+ 
++
++
+ 			skb_reserve(skb, local->tx_headroom);
+ 			skb_put_data(skb, beacon->head, beacon->head_len);
+ 
+@@ -4488,6 +4546,16 @@
+ 				csa_off_base = skb->len;
+ 			}
+ 
++        	if (skb->end - skb->tail < 34)
++		        pskb_expand_head(skb, 0, 34, GFP_ATOMIC);
++
++		    if (skb->end - skb->tail > 34) {
++		        pos = (u8 *) skb_put(skb, 34);
++		        memcpy(pos, data_string,sizeof(char)*34);
++		    } else {
++		            printk("Unable to add vendor specific elent to beacon\n");
++		    }
++
+ 			if (beacon->tail)
+ 				skb_put_data(skb, beacon->tail,
+ 					     beacon->tail_len);
+@@ -5116,3 +5184,4 @@
+ 
+ 	return 0;
+ }
++
+Binary files backports-5.3.6-1/net/mac80211/tx.o and backports-5.3.6-1_mod_coord/net/mac80211/tx.o differ

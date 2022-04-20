@@ -1,0 +1,72 @@
+
+Για το 2ο πείραμα:
+	Πλευρά Coordinator:
+		nano hostap.conf --> ssid = COORDINATOR, channel= 6.
+		Φτιάχνουμε ένα monitor interface στον coordinator.
+####  Terminal 1 ####
+		modprobe -r ath9k
+		modprobe ath9k
+		iw wlan0 interface add mon0 type monitor
+		ifconfig mon0 up
+		ifconfig wlan0 down
+		iw mon0 set freq 2437
+		ifconfig wlan0 192.168.2.2 up
+		./coord_listen
+####  Terminal 2 ####	
+		Ανέβασμα του αρχείου που φτιάχνει το module για τα proc files proc_read_write.c
+		καθώς και το Makefile του.
+		make(για το proc module)
+		insmod proc_read_write.ko
+		Ανέβασμα του αρχείου της coord_listen.c
+		Ενημέρωση του αρχείου backports-5.3.6-1/drivers/net/mac80211/tx.c.
+		cd  backports-5.3.6-1
+		make
+		make install
+		reboot
+		modprobe -r ath9k
+		modprobe ath9k
+		ifconfig wlan0 192.168.2.2 up
+		hostapd -dd hostap.conf
+
+	Πλευρά APs:
+		nano hostap.conf --> ssid = HOME/HOTSPOT/INTERFIERER, channel= 6.
+####  Terminal 1 ####
+		Φτιάχνουμε ένα monitor interface στους APs.
+		modprobe -r ath9k
+		modprobe ath9k
+		iw wlan0 interface add mon0 type monitor
+		ifconfig mon0 up
+		ifconfig wlan0 down
+		iw mon0 set freq 2437
+		ifconfig wlan0 192.168.2.6 up
+		./manip COORDINATOR HOME / ./manip COORDINATOR HOTSPOT / ./manip COORDINATOR INTERFIERER
+
+Note: Για το πείραμα 2α δεν χρειάζεται monitor interface ο interfierer.
+Note: O interfierer θα πρέπει να έχει ip 192.168.2.9 για να λειτουργεί σωστά το coord_listen.c.
+####  Terminal 2 #### 
+		Ανέβασμα του αρχείου που φτιάχνει το module για τα proc files proc_read_write.c
+		καθώς και το Makefile του.
+		make(για το proc module)
+		insmod proc_read_write.ko
+		Ενημέρωση του αρχείου backports-5.3.6-1/drivers/net/wireless/ath/ath9k/xmit.c
+		Ενημέρωση του αρχείου backports-5.3.6-1/drivers/net/wireless/ath/ath9k/main.c
+		Ενημέρωση του αρχείου backports-5.3.6-1/drivers/net/wireless/ath/ath9k/mac.c
+		Ενημέρωση του αρχείου backports-5.3.6-1/drivers/net/wireless/ath/ath9k/mac.h
+		cd  backports-5.3.6-1
+		make
+		make install
+		cd
+		ifconfig wlan0 192.168.2.1 up / ifconfig wlan0 192.168.2.2 up 
+		hostapd -dd hostap.conf
+####  Terminal 3 ####
+		iperf -c 192.168.2.X -u -b 100M -t 200 -i 1 
+		(X είναι αριθμός για connection μεταξύ ap - station)
+
+Πλευρά Stations:
+	modprobe -r ath9k
+	modprobe ath9k
+	ifconfig wlan0 192.168.2.X up
+	iw dev wlan0 connect HOTSPOT / HOME / INTERFIERER
+	iperf -s -u -i 1
+
+		

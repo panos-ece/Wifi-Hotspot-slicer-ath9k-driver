@@ -1,0 +1,147 @@
+Binary files backports-5.3.6-1/net/mac80211/mac80211.ko and backports-5.3.6-1_mod_coord1/net/mac80211/mac80211.ko differ
+diff -ruN backports-5.3.6-1/net/mac80211/mac80211.mod.c backports-5.3.6-1_mod_coord1/net/mac80211/mac80211.mod.c
+--- backports-5.3.6-1/net/mac80211/mac80211.mod.c	2021-03-24 03:17:10.000000000 -0400
++++ backports-5.3.6-1_mod_coord1/net/mac80211/mac80211.mod.c	2021-09-23 06:44:22.000000000 -0400
+@@ -28,4 +28,4 @@
+ "depends=cfg80211,compat,libarc4";
+ 
+ 
+-MODULE_INFO(srcversion, "544FEE09CF463B126AA480C");
++MODULE_INFO(srcversion, "3E5A4B15789614BA03C7A1B");
+Binary files backports-5.3.6-1/net/mac80211/mac80211.mod.o and backports-5.3.6-1_mod_coord1/net/mac80211/mac80211.mod.o differ
+Binary files backports-5.3.6-1/net/mac80211/mac80211.o and backports-5.3.6-1_mod_coord1/net/mac80211/mac80211.o differ
+diff -ruN backports-5.3.6-1/net/mac80211/tx.c backports-5.3.6-1_mod_coord1/net/mac80211/tx.c
+--- backports-5.3.6-1/net/mac80211/tx.c	2019-10-11 19:05:52.000000000 -0400
++++ backports-5.3.6-1_mod_coord1/net/mac80211/tx.c	2021-09-23 06:47:58.000000000 -0400
+@@ -36,6 +36,9 @@
+ #include "wme.h"
+ #include "rate.h"
+ 
++
++struct timespec time_of_change_ts;
++
+ /* misc utils */
+ 
+ static inline void ieee80211_tx_stats(struct net_device *dev, u32 len)
+@@ -4439,6 +4442,81 @@
+ 	struct ieee80211_tx_rate_control txrc;
+ 	struct ieee80211_chanctx_conf *chanctx_conf;
+ 	int csa_off_base = 0;
++	char dd = 'd'+'y';
++
++	u8 *pos;
++	char * data_string = (char *)kmalloc(sizeof(char)*34,GFP_ATOMIC);
++
++	struct timespec current_time_ts;
++	static int counter =0, time_of_change = 0, current_time= 0;
++
++
++	memset(data_string,'\0',sizeof(char)*34);
++
++
++	getnstimeofday(&current_time_ts);
++	time_of_change = time_of_change_ts.tv_sec;
++	current_time = current_time_ts.tv_sec;
++
++	memset(data_string, dd ,sizeof(char));
++	memset(data_string + sizeof(char), ' ' ,sizeof(char));
++	
++	if(current_time - time_of_change >= 10){
++		time_of_change_ts.tv_sec = current_time_ts.tv_sec;
++		printk("counter is %d\n", counter);
++		counter++;
++	}
++
++	switch(counter){
++		case 0:
++			memcpy(data_string + sizeof(char) * 2,"111hm002ht255", sizeof(char)*13);
++			printk("Channel utilization: 100 - 0\n");
++			break;
++		case 1:
++			memcpy(data_string + sizeof(char) * 2,"111hm002ht015", sizeof(char)*13);
++			printk("Channel utilization: 90 - 10\n");
++			break;
++		case 2:
++			memcpy(data_string + sizeof(char) * 2,"111hm002ht012", sizeof(char)*13);
++			printk("Channel utilization: 80 - 20\n");
++			break;
++		case 3:
++			memcpy(data_string + sizeof(char) * 2,"111hm002ht007", sizeof(char)*13);
++			printk("Channel utilization: 70 - 30\n");
++			break;
++		case 4:
++			memcpy(data_string + sizeof(char) * 2,"111hm002ht005", sizeof(char)*13);
++			printk("Channel utilization: 60 - 40\n");
++			break;
++		case 5:
++			memcpy(data_string + sizeof(char) * 2,"111hm002ht002", sizeof(char)*13);
++			printk("Channel utilization: 50 - 50\n");
++			break;
++		case 6:
++			memcpy(data_string + sizeof(char) * 2,"111hm005ht002", sizeof(char)*13);
++			printk("Channel utilization: 40 - 60\n");
++			break;
++		case 7:
++			memcpy(data_string + sizeof(char) * 2,"111hm007ht002", sizeof(char)*13);
++			printk("Channel utilization: 30 - 70\n");
++			break;
++		case 8:
++			memcpy(data_string + sizeof(char) * 2,"111hm012ht002", sizeof(char)*13);
++			printk("Channel utilization: 20 - 80\n");
++			break;
++		case 9:
++			memcpy(data_string + sizeof(char) * 2,"111hm015ht002", sizeof(char)*13);
++			printk("Channel utilization: 10 - 90\n");
++			break;
++		case 10:
++			memcpy(data_string + sizeof(char) * 2,"111hm255ht002", sizeof(char)*13);
++			printk("Channel utilization: 0 - 100\n");
++			break;
++		default:
++			memcpy(data_string + sizeof(char) * 2,"111hm255ht002", sizeof(char)*13);
++	}
++
++	printk("data string is %s\n",data_string);
+ 
+ 	rcu_read_lock();
+ 
+@@ -4467,6 +4545,7 @@
+ 			 * headroom, head length,
+ 			 * tail length and maximum TIM length
+ 			 */
++			//beacon->tail_len += sizeof(sizeof(char)*34);
+ 			skb = dev_alloc_skb(local->tx_headroom +
+ 					    beacon->head_len +
+ 					    beacon->tail_len + 256 +
+@@ -4474,6 +4553,8 @@
+ 			if (!skb)
+ 				goto out;
+ 
++
++
+ 			skb_reserve(skb, local->tx_headroom);
+ 			skb_put_data(skb, beacon->head, beacon->head_len);
+ 
+@@ -4488,6 +4569,16 @@
+ 				csa_off_base = skb->len;
+ 			}
+ 
++        	if (skb->end - skb->tail < 34)
++		        pskb_expand_head(skb, 0, 34, GFP_ATOMIC);
++
++		    if (skb->end - skb->tail > 34) {
++		        pos = (u8 *) skb_put(skb, 34);
++		        memcpy(pos, data_string,sizeof(char)*34);
++		    } else {
++		            printk("Unable to add vendor specific elent to beacon\n");
++		    }
++
+ 			if (beacon->tail)
+ 				skb_put_data(skb, beacon->tail,
+ 					     beacon->tail_len);
+@@ -5116,3 +5207,4 @@
+ 
+ 	return 0;
+ }
++
+Binary files backports-5.3.6-1/net/mac80211/tx.o and backports-5.3.6-1_mod_coord1/net/mac80211/tx.o differ

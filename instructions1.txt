@@ -1,0 +1,57 @@
+Για την εκτέλεση του κώδικα και των πειραμάτων η διαδικασία έχει ως εξής.
+
+Για το 1ο πείραμα:
+	
+Πλευρά Coordinator:
+	nano hostap.conf --> ssid = COORDINATOR, channel= 6.
+	Ενημέρωση του αρχείου backports-5.3.6-1/drivers/net/mac80211/tx.c.
+	cd  backports-5.3.6-1
+	make
+	make install
+	reboot
+	modprobe -r ath9k
+	modprobe ath9k
+	ifconfig wlan0 192.168.2.2 up
+	hostapd -dd hostap.conf
+
+Πλευρά APs:
+	nano hostap.conf --> ssid = HOME/HOTSPOT, channel= 6.
+	Φτιάχνουμε ένα monitor interface στους APs.
+####  Terminal 1 ####
+	modprobe -r ath9k
+	modprobe ath9k
+	iw wlan0 interface add mon0 type monitor
+	ifconfig mon0 up
+	ifconfig wlan0 down
+	iw mon0 set freq 2437
+	ifconfig wlan0 192.168.2.6 up
+	./manip COORDINATOR HOME / ./manip COORDINATOR HOTSPOT
+
+#### Terminal 2 #### (Πρώτα γίνεται το ανέβασμα των αρχείων του driver 
+			και μετά σηκώνουμε το monitor interface)
+	Ανέβασμα του αρχείου που φτιάχνει το module για τα proc files proc_read_write.c
+	καθώς και το Makefile του.
+	make(για το proc module)
+	insmod proc_read_write.ko
+	Ενημέρωση του αρχείου backports-5.3.6-1/drivers/net/wireless/ath/ath9k/xmit.c
+	Ενημέρωση του αρχείου backports-5.3.6-1/drivers/net/wireless/ath/ath9k/main.c
+	Ενημέρωση του αρχείου backports-5.3.6-1/drivers/net/wireless/ath/ath9k/mac.c
+	Ενημέρωση του αρχείου backports-5.3.6-1/drivers/net/wireless/ath/ath9k/mac.h
+	cd  backports-5.3.6-1
+	make
+	make install
+	cd
+	ifconfig wlan0 192.168.2.1 up / ifconfig wlan0 192.168.2.2 up 
+	hostapd -dd hostap.conf
+
+#### Terminal 3 ####
+	iperf -c 192.168.2.X -u -b 100M -t 200 -i 1 
+	(X είναι αριθμός για connection μεταξύ ap - station)
+
+
+Πλευρά Stations:
+	modprobe -r ath9k
+	modprobe ath9k
+	ifconfig wlan0 192.168.2.X up
+	iw dev wlan0 connect HOTSPOT / iw dev wlan0 connect HOME
+	iperf -s -u -i 1
